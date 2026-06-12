@@ -1,5 +1,9 @@
 import { query } from '../config/database';
-import { v4 as uuidv4 } from 'uuid';
+import { createWorker } from 'tesseract.js';
+import { PDFParse } from 'pdf-parse';
+import fs from 'fs/promises';
+import path from 'path';
+import logger from '../utils/logger';
 
 export interface OcrExtractedData {
   invoiceNumber?: string;
@@ -28,18 +32,31 @@ export interface LineItem {
   category?: string;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// AI OCR Engine — Simulated intelligent data extraction
-// In production: replace with Azure AI Document Intelligence / AWS Textract
-// ─────────────────────────────────────────────────────────────────────────────
+type OcrEngine = 'local' | 'simulation';
+
+const configuredEngine = (process.env.OCR_ENGINE || 'simulation').toLowerCase();
+const fallbackToSimulation = (process.env.OCR_FALLBACK_TO_SIMULATION || 'true').toLowerCase() !== 'false';
+
+// OCR engine. Local libraries are used in production; simulation keeps demos simple.
 export async function extractInvoiceData(
   invoiceId: string,
   filePath: string
 ): Promise<OcrExtractedData> {
   const startTime = Date.now();
+  let engine: OcrEngine = configuredEngine === 'local' ? 'local' : 'simulation';
+  let extracted: OcrExtractedData;
 
-  // Simulated AI extraction with realistic variance
-  const extracted = simulateOcrExtraction(filePath);
+  try {
+    extracted = engine === 'local'
+      ? await extractWithLocalLibraries(filePath)
+      : simulateOcrExtraction(filePath);
+  } catch (error) {
+    if (!fallbackToSimulation) throw error;
+
+    engine = 'simulation';
+    logger.warn(`Local OCR failed for ${path.basename(filePath)}. Falling back to simulation.`, error);
+    extracted = simulateOcrExtraction(filePath);
+  }
 
   const processingTime = Date.now() - startTime + Math.floor(Math.random() * 2000 + 500);
 
@@ -58,11 +75,186 @@ export async function extractInvoiceData(
       extracted.confidence,
       JSON.stringify(extracted.fieldConfidences),
       processingTime,
-      'ai-ocr-v1.0',
+      engine === 'local' ? 'local-library-ocr-v1' : 'simulated-ai-ocr-v1',
     ]
   );
 
   return extracted;
+}
+
+async function extractWithLocalLibraries(filePath: string): Promise<OcrExtractedData> {
+  const ext = path.extname(filePath).toLowerCase();
+  const rawText = ext === '.pdf'
+    ? await extractTextFromPdf(filePath)
+    : await extractTextFromImage(filePath);
+
+  if (rawText.trim().length < 20) {
+    throw new Error('Local OCR did not find enough readable invoice text.');
+  }
+
+  return parseInvoiceText(rawText);
+}
+
+async function extractTextFromPdf(filePath: string): Promise<string> {
+  const buffer = await fs.readFile(filePath);
+  const parser = new PDFParse({ data: buffer });
+
+  try {
+    const result = await parser.getText();
+    return result.text || '';
+  } finally {
+    await parser.destroy();
+  }
+}
+
+async function extractTextFromImage(filePath: string): Promise<string> {
+  const worker = await createWorker(process.env.OCR_LANGUAGE || 'eng');
+
+  try {
+    const result = await worker.recognize(filePath);
+    return result.data.text || '';
+  } finally {
+    await worker.terminate();
+  }
+}
+
+function parseInvoiceText(rawText: string): OcrExtractedData {
+  const text = rawText.replace(/\r/g, '\n');
+  const lines = text
+    .split('\n')
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+
+  const invoiceNumber = findText(text, [
+    /invoice\s*(?:number|no\.?|#|id)?\s*[:#-]?\s*([A-Z0-9][A-Z0-9\-\/_.]{2,})/i,
+    /\binv\s*(?:number|no\.?|#)?\s*[:#-]?\s*([A-Z0-9][A-Z0-9\-\/_.]{2,})/i,
+  ]);
+  const poNumber = findText(text, [
+    /(?:purchase\s*order|po)\s*(?:number|no\.?|#)?\s*[:#-]?\s*([A-Z0-9][A-Z0-9\-\/_.]{2,})/i,
+  ]);
+  const invoiceDate = normalizeDate(findText(text, [
+    /invoice\s*date\s*[:#-]?\s*([0-9]{1,4}[\/\-. ][0-9]{1,2}[\/\-. ][0-9]{2,4})/i,
+    /\bdate\s*[:#-]?\s*([0-9]{1,4}[\/\-. ][0-9]{1,2}[\/\-. ][0-9]{2,4})/i,
+  ]));
+  const dueDate = normalizeDate(findText(text, [
+    /due\s*date\s*[:#-]?\s*([0-9]{1,4}[\/\-. ][0-9]{1,2}[\/\-. ][0-9]{2,4})/i,
+  ]));
+  const subtotal = findAmount(text, [/subtotal\s*[:#-]?\s*([$A-Z]{0,4}\s*[0-9,]+(?:\.[0-9]{2})?)/i]);
+  const taxAmount = findAmount(text, [/(?:tax|gst|vat)\s*[:#-]?\s*([$A-Z]{0,4}\s*[0-9,]+(?:\.[0-9]{2})?)/i]);
+  const totalAmount = findAmount(text, [
+    /(?:grand\s*total|amount\s*due|balance\s*due|total)\s*[:#-]?\s*([$A-Z]{0,4}\s*[0-9,]+(?:\.[0-9]{2})?)/i,
+  ]);
+  const vendorName = findVendorName(lines);
+  const vendorAddress = findVendorAddress(lines);
+  const currency = findCurrency(text);
+  const lineItems = buildLineItems(lines);
+  const fieldConfidences = buildFieldConfidences({
+    invoiceNumber,
+    vendorName,
+    invoiceDate,
+    dueDate,
+    poNumber,
+    subtotal,
+    taxAmount,
+    totalAmount,
+    currency,
+  });
+
+  const confidence = Object.values(fieldConfidences).length
+    ? parseFloat((Object.values(fieldConfidences).reduce((sum, value) => sum + value, 0) / Object.values(fieldConfidences).length).toFixed(1))
+    : 55;
+
+  return {
+    invoiceNumber,
+    vendorName,
+    vendorAddress,
+    invoiceDate,
+    dueDate,
+    poNumber,
+    subtotal,
+    taxAmount,
+    totalAmount,
+    currency,
+    lineItems,
+    confidence,
+    fieldConfidences,
+  };
+}
+
+function findText(text: string, patterns: RegExp[]): string | undefined {
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) return match[1].trim();
+  }
+  return undefined;
+}
+
+function findAmount(text: string, patterns: RegExp[]): number | undefined {
+  const value = findText(text, patterns);
+  return parseMoney(value);
+}
+
+function parseMoney(value?: string): number | undefined {
+  if (!value) return undefined;
+  const parsed = Number(value.replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function findVendorName(lines: string[]): string | undefined {
+  const ignored = /invoice|receipt|statement|bill\s*to|ship\s*to|date|total|subtotal|tax|amount|page/i;
+  const likelyVendor = lines.find((line) => line.length >= 3 && line.length <= 80 && !ignored.test(line));
+  return likelyVendor;
+}
+
+function findVendorAddress(lines: string[]): string | undefined {
+  const addressLine = lines.find((line) =>
+    /\d+/.test(line) && /(street|st\.?|road|rd\.?|avenue|ave\.?|suite|ste\.?|lane|ln\.?|drive|dr\.?|blvd|boulevard)/i.test(line)
+  );
+  return addressLine;
+}
+
+function findCurrency(text: string): string {
+  if (/\bINR\b|₹/i.test(text)) return 'INR';
+  if (/\bEUR\b|€/i.test(text)) return 'EUR';
+  if (/\bGBP\b|£/i.test(text)) return 'GBP';
+  if (/\bUSD\b|\$/i.test(text)) return 'USD';
+  return 'USD';
+}
+
+function buildLineItems(lines: string[]): LineItem[] {
+  return lines
+    .map((line) => {
+      const match = line.match(/^(.{3,}?)\s+(\d+(?:\.\d+)?)\s+([$A-Z]{0,4}\s*[0-9,]+(?:\.[0-9]{2})?)\s+([$A-Z]{0,4}\s*[0-9,]+(?:\.[0-9]{2})?)$/i);
+      if (!match) return null;
+
+      const quantity = Number(match[2]);
+      const unitPrice = parseMoney(match[3]) || 0;
+      const amount = parseMoney(match[4]) || unitPrice * quantity;
+
+      return {
+        description: match[1].trim(),
+        quantity,
+        unitPrice,
+        amount,
+      };
+    })
+    .filter((item): item is LineItem => Boolean(item))
+    .slice(0, 25);
+}
+
+function buildFieldConfidences(fields: Record<string, unknown>): Record<string, number> {
+  return Object.entries(fields).reduce<Record<string, number>>((acc, [key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      acc[key] = key === 'currency' ? 75 : 80;
+    }
+    return acc;
+  }, {});
+}
+
+function normalizeDate(value?: string): string | undefined {
+  if (!value) return undefined;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString().split('T')[0];
 }
 
 function simulateOcrExtraction(filePath: string): OcrExtractedData {

@@ -116,6 +116,9 @@ services:
       <<: *service-env
       PORT: 3003
       UPLOAD_DIR: /app/uploads
+      OCR_ENGINE: ${OCR_ENGINE:-simulation}
+      OCR_LANGUAGE: ${OCR_LANGUAGE:-eng}
+      OCR_FALLBACK_TO_SIMULATION: ${OCR_FALLBACK_TO_SIMULATION:-true}
     expose:
       - "3003"
     volumes:
