@@ -1,0 +1,16 @@
+**/node_modules
+**/dist
+**/coverage
+**/.cache
+**/.vite
+**/logs
+**/*.log
+.git
+.github
+.env
+.env.*
+!.env.example
+.system_generated
+.gemini
+brain
+README.md

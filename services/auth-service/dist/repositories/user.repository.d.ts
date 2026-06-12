@@ -1,0 +1,10 @@
+import { User, Role } from '../models/user.model';
+export declare function findUserByEmail(email: string): Promise<User | null>;
+export declare function findUserById(id: string): Promise<User | null>;
+export declare function findRoleByName(name: string): Promise<Role | null>;
+export declare function findRoleById(id: string): Promise<Role | null>;
+export declare function createUser(user: Omit<User, 'id' | 'isActive' | 'isEmailVerified' | 'failedLoginAttempts' | 'createdAt' | 'updatedAt'>): Promise<User>;
+export declare function updateUserLoginStats(id: string, success: boolean): Promise<void>;
+export declare function updateUserRefreshToken(id: string, tokenHash: string | null): Promise<void>;
+export declare function getAllUsers(): Promise<User[]>;
+export declare function deleteUser(id: string): Promise<boolean>;
