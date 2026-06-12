@@ -5,6 +5,7 @@ exports.getFraudScore = getFraudScore;
 exports.getFraudTrends = getFraudTrends;
 exports.getHighRiskVendors = getHighRiskVendors;
 const database_1 = require("../config/database");
+const openai_service_1 = require("./openai.service");
 // ─────────────────────────────────────────────────────────────────────────────
 // AI Fraud Detection Engine
 // Analyzes multiple risk dimensions and generates explainable risk scores
@@ -102,9 +103,27 @@ async function analyzeInvoice(invoiceId, ocrData) {
     const recommendation = riskLevel === 'critical' ? 'reject' :
         riskLevel === 'high' ? 'manual_review' :
             riskScore >= 15 ? 'manual_review' : 'approve';
-    const explanation = generateExplanation(riskScore, riskLevel, indicators, anomalyDetails);
-    const recommendations = generateRecommendations(riskLevel, indicators);
+    let explanation = generateExplanation(riskScore, riskLevel, indicators, anomalyDetails);
+    let recommendations = generateRecommendations(riskLevel, indicators);
     const confidence = parseFloat((85 + (100 - riskScore) * 0.1).toFixed(1));
+    const baseResult = {
+        invoiceId,
+        riskScore,
+        riskLevel,
+        fraudIndicators: indicators,
+        anomalyDetails,
+        explanation,
+        recommendations,
+        recommendation,
+        confidence,
+    };
+    const openAiEnhancement = await (0, openai_service_1.enhanceFraudAnalysis)(baseResult, ocrData);
+    if (openAiEnhancement) {
+        explanation = openAiEnhancement.explanation;
+        recommendations = openAiEnhancement.recommendations.length > 0
+            ? openAiEnhancement.recommendations
+            : recommendations;
+    }
     // Persist result
     await (0, database_1.query)(`INSERT INTO fraud_scores (invoice_id, risk_score, risk_level, fraud_indicators, anomaly_details, explanation, recommendations)
      VALUES ($1, $2, $3, $4, $5, $6, $7)

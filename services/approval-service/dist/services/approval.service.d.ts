@@ -8,7 +8,7 @@ export declare function startWorkflow(workflowInfo: {
 export declare function getWorkflow(invoiceId: string): Promise<any>;
 export declare function recordAction(actionInfo: {
     invoiceId: string;
-    action: 'approved' | 'rejected' | 'commented' | 'escalated';
+    action: 'approved' | 'rejected' | 'commented' | 'escalated' | 'on_hold';
     performedBy?: string;
     performerName?: string;
     comments?: string;

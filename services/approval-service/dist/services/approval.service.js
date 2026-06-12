@@ -114,6 +114,10 @@ async function recordAction(actionInfo) {
         newStatus = 'rejected';
         newStep = 'completed';
     }
+    else if (actionInfo.action === 'on_hold') {
+        newStatus = 'on_hold';
+        newStep = 'manager_review';
+    }
     else if (actionInfo.action === 'escalated') {
         newStatus = 'pending_review';
         newStep = 'manager_review';

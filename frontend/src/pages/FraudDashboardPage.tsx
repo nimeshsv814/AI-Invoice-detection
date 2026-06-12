@@ -44,7 +44,7 @@ export default function FraudDashboardPage() {
           { label: 'Medium', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
           { label: 'Low', color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
         ].map(({ label, color, bg }) => {
-          const found = byLevel.find((b: any) => b.risk_level === label.toLowerCase());
+          const found = byLevel.find((b: any) => b.riskLevel === label.toLowerCase());
           return (
             <Card key={label} sx={{ px: 2.5, py: 1.5, background: bg, border: `1px solid ${color}30` }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -104,16 +104,16 @@ export default function FraudDashboardPage() {
                       <ListItem disablePadding sx={{ py: 1 }}>
                         <Box sx={{
                           width: 8, height: 8, borderRadius: '50%', flexShrink: 0, mr: 1.5,
-                          background: alert.risk_level === 'critical' ? '#ef4444' : '#f97316',
+                          background: alert.riskLevel === 'critical' ? '#ef4444' : '#f97316',
                         }} />
                         <ListItemText
-                          primary={alert.invoice_number || alert.id.slice(0, 8)}
+                          primary={alert.invoiceNumber || alert.id.slice(0, 8)}
                           secondary={`${alert.vendor_name || '—'} • ${formatCurrency(Number(alert.total_amount || 0))}`}
                           primaryTypographyProps={{ fontSize: '0.83rem', fontWeight: 600 }}
                           secondaryTypographyProps={{ fontSize: '0.72rem', color: '#64748b' }}
                         />
                         <Chip
-                          label={`${Number(alert.risk_score || 0).toFixed(0)}`}
+                          label={`${Number(alert.riskScore || 0).toFixed(0)}`}
                           size="small"
                           sx={{ fontSize: '0.7rem', fontWeight: 700, background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}
                         />
@@ -147,13 +147,13 @@ export default function FraudDashboardPage() {
                   </TableHead>
                   <TableBody>
                     {data.highRiskVendors.map((v: any) => (
-                      <TableRow key={v.vendor_name} hover>
+                      <TableRow key={v.vendorName} hover>
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Avatar sx={{ width: 26, height: 26, fontSize: '0.65rem', background: 'rgba(239,68,68,0.2)', color: '#ef4444' }}>
-                              {(v.vendor_name || 'U')[0]}
+                              {(v.vendorName || 'U')[0]}
                             </Avatar>
-                            <Typography variant="body2" fontWeight={600}>{v.vendor_name}</Typography>
+                            <Typography variant="body2" fontWeight={600}>{v.vendorName}</Typography>
                           </Box>
                         </TableCell>
                         <TableCell align="right">{v.assessments}</TableCell>
@@ -161,22 +161,22 @@ export default function FraudDashboardPage() {
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
                             <LinearProgress
                               variant="determinate"
-                              value={Math.min(Number(v.avg_risk_score), 100)}
+                              value={Math.min(Number(v.avgRiskScore), 100)}
                               sx={{ width: 60, '& .MuiLinearProgress-bar': { background: '#ef4444' } }}
                             />
                             <Typography variant="body2" fontWeight={600} sx={{ color: '#ef4444' }}>
-                              {Number(v.avg_risk_score).toFixed(0)}
+                              {Number(v.avgRiskScore).toFixed(0)}
                             </Typography>
                           </Box>
                         </TableCell>
                         <TableCell align="right">
                           <Typography variant="body2" fontWeight={700} sx={{ color: '#ef4444' }}>
-                            {Number(v.max_risk_score).toFixed(0)}
+                            {Number(v.maxRiskScore).toFixed(0)}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={Number(v.avg_risk_score) >= 75 ? 'CRITICAL' : 'HIGH'}
+                            label={Number(v.avgRiskScore) >= 75 ? 'CRITICAL' : 'HIGH'}
                             color="error" size="small"
                             icon={<WarningRounded />}
                             sx={{ fontSize: '0.7rem' }}

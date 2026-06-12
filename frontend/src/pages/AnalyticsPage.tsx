@@ -34,17 +34,17 @@ export default function AnalyticsPage() {
 
   const spendTrend = spend?.spendTrend || [];
   const weeks = spendTrend.map((s: any) => new Date(s.week).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-  const spendVals = spendTrend.map((s: any) => Number(s.total_spend) / 1000);
+  const spendVals = spendTrend.map((s: any) => Number(s.totalSpend) / 1000);
 
   const byCategory = spend?.byCategory || [];
   const catLabels = byCategory.map((c: any) => c.category || 'Other');
-  const catValues = byCategory.map((c: any) => Number(c.total_spend) / 1000);
+  const catValues = byCategory.map((c: any) => Number(c.totalSpend) / 1000);
 
   const byStatus = spend?.byStatus || [];
 
   const months = (kpis?.monthlySpend || []).map((m: any) => new Date(m.month).toLocaleDateString('en-US', { month: 'short' }));
-  const monthlyVals = (kpis?.monthlySpend || []).map((m: any) => Number(m.total_spend) / 1000);
-  const countVals = (kpis?.monthlySpend || []).map((m: any) => Number(m.invoice_count));
+  const monthlyVals = (kpis?.monthlySpend || []).map((m: any) => Number(m.totalSpend) / 1000);
+  const countVals = (kpis?.monthlySpend || []).map((m: any) => Number(m.invoiceCount));
 
   return (
     <Box>
@@ -66,10 +66,10 @@ export default function AnalyticsPage() {
       {/* KPI summary */}
       <Grid container spacing={2.5} sx={{ mb: 3 }}>
         {[
-          { label: 'Total Approved Spend', value: formatCurrency(Number(kpis?.invoiceTotals?.total_approved_spend || 0)), color: '#10b981' },
-          { label: 'Pending Spend', value: formatCurrency(Number(kpis?.invoiceTotals?.total_pending_spend || 0)), color: '#f59e0b' },
-          { label: 'Avg Invoice Amount', value: formatCurrency(Number(kpis?.invoiceTotals?.avg_invoice_amount || 0)), color: '#6366f1' },
-          { label: 'Avg OCR Confidence', value: `${Number(kpis?.invoiceTotals?.avg_ocr_confidence || 0).toFixed(1)}%`, color: '#3b82f6' },
+          { label: 'Total Approved Spend', value: formatCurrency(Number(kpis?.invoiceTotals?.totalApprovedSpend || 0)), color: '#10b981' },
+          { label: 'Pending Spend', value: formatCurrency(Number(kpis?.invoiceTotals?.totalPendingSpend || 0)), color: '#f59e0b' },
+          { label: 'Avg Invoice Amount', value: formatCurrency(Number(kpis?.invoiceTotals?.avgInvoiceAmount || 0)), color: '#6366f1' },
+          { label: 'Avg OCR Confidence', value: `${Number(kpis?.invoiceTotals?.avgOcrConfidence || 0).toFixed(1)}%`, color: '#3b82f6' },
         ].map(({ label, value, color }) => (
           <Grid item xs={12} sm={6} md={3} key={label}>
             <Card>
@@ -129,7 +129,7 @@ export default function AnalyticsPage() {
                         <Box sx={{ height: 4, borderRadius: 2, background: 'rgba(148,163,184,0.1)', overflow: 'hidden' }}>
                           <Box sx={{
                             height: '100%', borderRadius: 2,
-                            width: `${Math.min((Number(s.count) / (kpis?.invoiceTotals?.total_invoices || 1)) * 100, 100)}%`,
+                            width: `${Math.min((Number(s.count) / (kpis?.invoiceTotals?.totalInvoices || 1)) * 100, 100)}%`,
                             background: s.status === 'approved' ? '#10b981' : s.status === 'rejected' ? '#ef4444' : s.status === 'fraud_suspected' ? '#f97316' : '#6366f1',
                           }} />
                         </Box>
@@ -169,7 +169,7 @@ export default function AnalyticsPage() {
                 <LineChart
                   xAxis={[{ data: weeks, scaleType: 'point' }]}
                   series={[{
-                    data: spendTrend.map((s: any) => Number(s.invoice_count)),
+                    data: spendTrend.map((s: any) => Number(s.invoiceCount)),
                     label: 'Invoices',
                     color: '#8b5cf6',
                     area: true,
@@ -200,22 +200,22 @@ export default function AnalyticsPage() {
                 </TableHead>
                 <TableBody>
                   {(kpis?.topVendors || []).map((v: any, i: number) => (
-                    <TableRow key={v.vendor_name} hover>
+                    <TableRow key={v.vendorName} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight={700} sx={{ color: '#6366f1' }}>{i + 1}</Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" fontWeight={600}>{v.vendor_name}</Typography>
+                        <Typography variant="body2" fontWeight={600}>{v.vendorName}</Typography>
                       </TableCell>
-                      <TableCell align="right">{v.invoice_count}</TableCell>
+                      <TableCell align="right">{v.invoiceCount}</TableCell>
                       <TableCell align="right">
-                        <Typography fontWeight={600}>{formatCurrency(Number(v.total_spend))}</Typography>
+                        <Typography fontWeight={600}>{formatCurrency(Number(v.totalSpend))}</Typography>
                       </TableCell>
-                      <TableCell align="right">{formatCurrency(Number(v.avg_amount || 0))}</TableCell>
+                      <TableCell align="right">{formatCurrency(Number(v.avgAmount || 0))}</TableCell>
                       <TableCell>
                         <Chip
-                          label={Number(v.max_fraud_score) >= 75 ? 'Critical' : Number(v.max_fraud_score) >= 50 ? 'High' : Number(v.max_fraud_score) >= 25 ? 'Medium' : 'Low'}
-                          color={Number(v.max_fraud_score) >= 50 ? 'error' : Number(v.max_fraud_score) >= 25 ? 'warning' : 'success'}
+                          label={Number(v.maxFraudScore) >= 75 ? 'Critical' : Number(v.maxFraudScore) >= 50 ? 'High' : Number(v.maxFraudScore) >= 25 ? 'Medium' : 'Low'}
+                          color={Number(v.maxFraudScore) >= 50 ? 'error' : Number(v.maxFraudScore) >= 25 ? 'warning' : 'success'}
                           size="small"
                           sx={{ fontSize: '0.7rem' }}
                         />

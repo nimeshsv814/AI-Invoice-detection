@@ -102,7 +102,7 @@ export default function DashboardPage() {
   const approval = data?.approvalStats;
 
   const months = data?.monthlySpend?.map((m) => new Date(m.month).toLocaleDateString('en-US', { month: 'short' })) || [];
-  const spendValues = data?.monthlySpend?.map((m) => Number(m.total_spend) / 1000) || [];
+  const spendValues = data?.monthlySpend?.map((m: any) => Number(m.totalSpend) / 1000) || [];
 
   return (
     <Box>
@@ -111,7 +111,7 @@ export default function DashboardPage() {
         <Grid item xs={12} sm={6} md={3}>
           <KPICard
             title="Total Invoices"
-            value={Number(inv?.total_invoices || 0).toLocaleString()}
+            value={Number((inv as any)?.totalInvoices || 0).toLocaleString()}
             subtitle={`${Number(inv?.pending || 0)} pending review`}
             icon={<ReceiptLongRounded />}
             color="#6366f1"
@@ -122,8 +122,8 @@ export default function DashboardPage() {
         <Grid item xs={12} sm={6} md={3}>
           <KPICard
             title="Approved Spend"
-            value={formatCurrency(Number(inv?.total_approved_spend || 0))}
-            subtitle={`Avg. ${formatCurrency(Number(inv?.avg_invoice_amount || 0))} per invoice`}
+            value={formatCurrency(Number((inv as any)?.totalApprovedSpend || 0))}
+            subtitle={`Avg. ${formatCurrency(Number((inv as any)?.avgInvoiceAmount || 0))} per invoice`}
             icon={<CheckCircleRounded />}
             color="#10b981"
             trend={12}
@@ -134,7 +134,7 @@ export default function DashboardPage() {
           <KPICard
             title="Fraud Alerts"
             value={Number(fraud?.critical || 0) + Number(fraud?.high || 0)}
-            subtitle={`Avg. risk score: ${Number(fraud?.avg_risk_score || 0).toFixed(0)}/100`}
+            subtitle={`Avg. risk score: ${Number((fraud as any)?.avgRiskScore || 0).toFixed(0)}/100`}
             icon={<SecurityRounded />}
             color="#ef4444"
             trend={-5}
@@ -145,7 +145,7 @@ export default function DashboardPage() {
           <KPICard
             title="Active Vendors"
             value={Number(vendor?.active || 0).toLocaleString()}
-            subtitle={`${Number(vendor?.high_risk_vendors || 0)} high-risk vendors`}
+            subtitle={`${Number((vendor as any)?.highRiskVendors || 0)} high-risk vendors`}
             icon={<StoreRounded />}
             color="#f59e0b"
             trend={3}
@@ -203,10 +203,10 @@ export default function DashboardPage() {
               <Typography variant="h6" fontWeight={700} sx={{ mb: 1.5 }}>Fraud Risk Breakdown</Typography>
               <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5, justifyContent: 'center' }}>
                 {[
-                  { label: 'Critical', value: Number(fraud?.critical || 0), color: '#ef4444', pct: fraud?.total_analyzed ? Math.round(Number(fraud?.critical || 0) / Number(fraud?.total_analyzed || 1) * 100) : 0 },
-                  { label: 'High',     value: Number(fraud?.high || 0),     color: '#f97316', pct: fraud?.total_analyzed ? Math.round(Number(fraud?.high || 0) / Number(fraud?.total_analyzed || 1) * 100) : 0 },
-                  { label: 'Medium',   value: Number(fraud?.medium || 0),   color: '#f59e0b', pct: fraud?.total_analyzed ? Math.round(Number(fraud?.medium || 0) / Number(fraud?.total_analyzed || 1) * 100) : 0 },
-                  { label: 'Low',      value: Number(fraud?.low || 0),      color: '#10b981', pct: fraud?.total_analyzed ? Math.round(Number(fraud?.low || 0) / Number(fraud?.total_analyzed || 1) * 100) : 0 },
+                  { label: 'Critical', value: Number(fraud?.critical || 0), color: '#ef4444', pct: (fraud as any)?.totalAnalyzed ? Math.round(Number(fraud?.critical || 0) / Number((fraud as any)?.totalAnalyzed || 1) * 100) : 0 },
+                  { label: 'High',     value: Number(fraud?.high || 0),     color: '#f97316', pct: (fraud as any)?.totalAnalyzed ? Math.round(Number(fraud?.high || 0) / Number((fraud as any)?.totalAnalyzed || 1) * 100) : 0 },
+                  { label: 'Medium',   value: Number(fraud?.medium || 0),   color: '#f59e0b', pct: (fraud as any)?.totalAnalyzed ? Math.round(Number(fraud?.medium || 0) / Number((fraud as any)?.totalAnalyzed || 1) * 100) : 0 },
+                  { label: 'Low',      value: Number(fraud?.low || 0),      color: '#10b981', pct: (fraud as any)?.totalAnalyzed ? Math.round(Number(fraud?.low || 0) / Number((fraud as any)?.totalAnalyzed || 1) * 100) : 0 },
                 ].map((row) => (
                   <Box key={row.label}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
@@ -295,8 +295,8 @@ export default function DashboardPage() {
                 </Tooltip>
               </Box>
               <List disablePadding>
-                {(data?.topVendors || []).slice(0, 6).map((v, i) => (
-                  <React.Fragment key={v.vendor_name}>
+                {(data?.topVendors || []).slice(0, 6).map((v: any, i) => (
+                  <React.Fragment key={v.vendorName}>
                     <ListItem disablePadding sx={{ py: 1 }}>
                       <Box
                         sx={{
@@ -309,16 +309,16 @@ export default function DashboardPage() {
                         {i + 1}
                       </Box>
                       <ListItemText
-                        primary={v.vendor_name}
-                        secondary={`${Number(v.invoice_count)} invoices`}
+                        primary={v.vendorName}
+                        secondary={`${Number(v.invoiceCount)} invoices`}
                         primaryTypographyProps={{ fontSize: '0.83rem', fontWeight: 600 }}
                         secondaryTypographyProps={{ fontSize: '0.72rem', color: '#64748b' }}
                       />
                       <Box sx={{ textAlign: 'right' }}>
                         <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.83rem' }}>
-                          {formatCurrency(Number(v.total_spend))}
+                          {formatCurrency(Number(v.totalSpend))}
                         </Typography>
-                        {Number(v.max_fraud_score) > 50 && (
+                        {Number(v.maxFraudScore) > 50 && (
                           <Chip
                             label="High Risk" color="error" size="small"
                             icon={<WarningRounded />}

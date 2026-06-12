@@ -36,15 +36,16 @@ export default function ApprovalsPage() {
         status: statusFilter || undefined,
       });
       const d = res.data.data;
-      setItems(d.workflows || []);
-      setTotal(d.total || 0);
+      const rows = Array.isArray(d) ? d : d.workflows || [];
+      setItems(rows);
+      setTotal(d.total || rows.length);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
 
   useEffect(() => { fetchQueue(); }, [page, rowsPerPage, statusFilter]);
 
-  const handleAction = async (action: 'approve' | 'reject' | 'request_more_info' | 'on_hold') => {
+  const handleAction = async (action: 'approved' | 'rejected' | 'on_hold') => {
     if (!selectedItem) return;
     setActionLoading(true);
     try {
@@ -199,10 +200,10 @@ export default function ApprovalsPage() {
               <Button variant="outlined" color="warning" startIcon={<PauseRounded />} onClick={() => handleAction('on_hold')} disabled={actionLoading}>
                 Hold
               </Button>
-              <Button variant="outlined" color="error" startIcon={<CancelRounded />} onClick={() => handleAction('reject')} disabled={actionLoading}>
+              <Button variant="outlined" color="error" startIcon={<CancelRounded />} onClick={() => handleAction('rejected')} disabled={actionLoading}>
                 Reject
               </Button>
-              <Button variant="contained" color="success" startIcon={<CheckCircleRounded />} onClick={() => handleAction('approve')} disabled={actionLoading}>
+              <Button variant="contained" color="success" startIcon={<CheckCircleRounded />} onClick={() => handleAction('approved')} disabled={actionLoading}>
                 {actionLoading ? <CircularProgress size={16} color="inherit" /> : 'Approve'}
               </Button>
             </DialogActions>

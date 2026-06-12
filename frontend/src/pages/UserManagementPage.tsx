@@ -17,12 +17,22 @@ export default function UserManagementPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    roleName: '',
+    department: '',
+  });
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
       const res = await authApi.getUsers();
-      setUsers(res.data.data?.users || []);
+      const data = res.data.data;
+      setUsers(Array.isArray(data) ? data : data?.users || []);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -36,6 +46,17 @@ export default function UserManagementPage() {
       fetchUsers();
     } catch (err) { console.error(err); }
     finally { setDeleteLoading(null); }
+  };
+
+  const handleCreate = async () => {
+    setCreateLoading(true);
+    try {
+      await authApi.register(form);
+      setDialogOpen(false);
+      setForm({ firstName: '', lastName: '', email: '', password: '', roleName: '', department: '' });
+      fetchUsers();
+    } catch (err) { console.error(err); }
+    finally { setCreateLoading(false); }
   };
 
   return (
@@ -149,14 +170,14 @@ export default function UserManagementPage() {
         <DialogContent dividers>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <Stack direction="row" spacing={2}>
-              <TextField fullWidth label="First Name" size="small" />
-              <TextField fullWidth label="Last Name" size="small" />
+              <TextField fullWidth label="First Name" size="small" value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} />
+              <TextField fullWidth label="Last Name" size="small" value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} />
             </Stack>
-            <TextField fullWidth label="Email Address" type="email" size="small" />
-            <TextField fullWidth label="Password" type="password" size="small" />
+            <TextField fullWidth label="Email Address" type="email" size="small" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+            <TextField fullWidth label="Password" type="password" size="small" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} />
             <FormControl fullWidth size="small">
               <InputLabel>Role</InputLabel>
-              <Select label="Role" defaultValue="">
+              <Select label="Role" value={form.roleName} onChange={(e) => setForm((f) => ({ ...f, roleName: e.target.value }))}>
                 <MenuItem value="admin">Admin</MenuItem>
                 <MenuItem value="finance_manager">Finance Manager</MenuItem>
                 <MenuItem value="finance_analyst">Finance Analyst</MenuItem>
@@ -164,12 +185,19 @@ export default function UserManagementPage() {
                 <MenuItem value="auditor">Auditor</MenuItem>
               </Select>
             </FormControl>
-            <TextField fullWidth label="Department" size="small" />
+            <TextField fullWidth label="Department" size="small" value={form.department} onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))} />
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" startIcon={<AddRounded />}>Create User</Button>
+          <Button
+            variant="contained"
+            startIcon={createLoading ? <CircularProgress size={16} color="inherit" /> : <AddRounded />}
+            onClick={handleCreate}
+            disabled={createLoading || !form.firstName || !form.lastName || !form.email || !form.password || !form.roleName}
+          >
+            Create User
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

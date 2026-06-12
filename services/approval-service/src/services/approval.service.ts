@@ -74,7 +74,7 @@ export async function getWorkflow(invoiceId: string): Promise<any> {
 
 export async function recordAction(actionInfo: {
   invoiceId: string;
-  action: 'approved' | 'rejected' | 'commented' | 'escalated';
+  action: 'approved' | 'rejected' | 'commented' | 'escalated' | 'on_hold';
   performedBy?: string;
   performerName?: string;
   comments?: string;
@@ -94,6 +94,9 @@ export async function recordAction(actionInfo: {
   } else if (actionInfo.action === 'rejected') {
     newStatus = 'rejected';
     newStep = 'completed';
+  } else if (actionInfo.action === 'on_hold') {
+    newStatus = 'on_hold';
+    newStep = 'manager_review';
   } else if (actionInfo.action === 'escalated') {
     newStatus = 'pending_review';
     newStep = 'manager_review';

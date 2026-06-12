@@ -1,4 +1,5 @@
 import { query } from '../config/database';
+import { enhanceFraudAnalysis } from './openai.service';
 
 export interface FraudAnalysisResult {
   invoiceId: string;
@@ -131,9 +132,29 @@ export async function analyzeInvoice(
     riskLevel === 'high'     ? 'manual_review' :
     riskScore >= 15          ? 'manual_review' : 'approve';
 
-  const explanation = generateExplanation(riskScore, riskLevel, indicators, anomalyDetails);
-  const recommendations = generateRecommendations(riskLevel, indicators);
+  let explanation = generateExplanation(riskScore, riskLevel, indicators, anomalyDetails);
+  let recommendations = generateRecommendations(riskLevel, indicators);
   const confidence = parseFloat((85 + (100 - riskScore) * 0.1).toFixed(1));
+
+  const baseResult: FraudAnalysisResult = {
+    invoiceId,
+    riskScore,
+    riskLevel,
+    fraudIndicators: indicators,
+    anomalyDetails,
+    explanation,
+    recommendations,
+    recommendation,
+    confidence,
+  };
+
+  const openAiEnhancement = await enhanceFraudAnalysis(baseResult, ocrData);
+  if (openAiEnhancement) {
+    explanation = openAiEnhancement.explanation;
+    recommendations = openAiEnhancement.recommendations.length > 0
+      ? openAiEnhancement.recommendations
+      : recommendations;
+  }
 
   // Persist result
   await query(

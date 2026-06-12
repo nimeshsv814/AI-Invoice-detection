@@ -9,6 +9,20 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+const toCamel = (key: string) => key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+
+const camelizeKeys = (value: any): any => {
+  if (Array.isArray(value)) return value.map(camelizeKeys);
+  if (!value || typeof value !== 'object' || value instanceof Date || value instanceof File) return value;
+
+  return Object.entries(value).reduce<Record<string, any>>((acc, [key, child]) => {
+    const normalizedChild = camelizeKeys(child);
+    acc[key] = normalizedChild;
+    acc[toCamel(key)] = normalizedChild;
+    return acc;
+  }, {});
+};
+
 // Request interceptor — attach JWT
 api.interceptors.request.use(
   (config) => {
@@ -21,7 +35,10 @@ api.interceptors.request.use(
 
 // Response interceptor — handle 401 (token expired)
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    response.data = camelizeKeys(response.data);
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 

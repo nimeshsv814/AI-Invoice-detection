@@ -29,14 +29,28 @@ export default function VendorsPage() {
   const [search, setSearch] = useState('');
   const [assessLoading, setAssessLoading] = useState<string | null>(null);
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [form, setForm] = useState({
+    vendorCode: '',
+    companyName: '',
+    contactName: '',
+    email: '',
+    phone: '',
+    country: 'US',
+    category: '',
+    currency: 'USD',
+    paymentTerms: 30,
+  });
 
   const fetchVendors = async () => {
     setLoading(true);
     try {
       const res = await vendorApi.getAll({ page: page + 1, limit: rowsPerPage, search: search || undefined });
       const d = res.data.data;
-      setVendors(d.vendors || []);
-      setTotal(d.total || 0);
+      const rows = Array.isArray(d) ? d : d.vendors || [];
+      setVendors(rows);
+      setTotal(d.total || rows.length);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -52,6 +66,27 @@ export default function VendorsPage() {
     finally { setAssessLoading(null); }
   };
 
+  const handleCreate = async () => {
+    setCreateLoading(true);
+    try {
+      await vendorApi.create(form);
+      setCreateOpen(false);
+      setForm({
+        vendorCode: '',
+        companyName: '',
+        contactName: '',
+        email: '',
+        phone: '',
+        country: 'US',
+        category: '',
+        currency: 'USD',
+        paymentTerms: 30,
+      });
+      fetchVendors();
+    } catch (err) { console.error(err); }
+    finally { setCreateLoading(false); }
+  };
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
@@ -59,7 +94,7 @@ export default function VendorsPage() {
           <Typography variant="h5" fontWeight={700} sx={{ mb: 0.5 }}>Vendor Management</Typography>
           <Typography variant="body2" sx={{ color: '#64748b' }}>{total} registered vendors</Typography>
         </Box>
-        <Button variant="contained" startIcon={<AddRounded />}>Add Vendor</Button>
+        <Button variant="contained" startIcon={<AddRounded />} onClick={() => setCreateOpen(true)}>Add Vendor</Button>
       </Box>
 
       <Card sx={{ mb: 2 }}>
@@ -229,6 +264,44 @@ export default function VendorsPage() {
             </DialogActions>
           </>
         )}
+      </Dialog>
+
+      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { background: '#0f0f1e' } }}>
+        <DialogTitle>
+          <Typography variant="h6" fontWeight={700}>Add Vendor</Typography>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <Stack direction="row" spacing={2}>
+              <TextField fullWidth size="small" label="Vendor Code" value={form.vendorCode} onChange={(e) => setForm((f) => ({ ...f, vendorCode: e.target.value }))} />
+              <TextField fullWidth size="small" label="Company Name" value={form.companyName} onChange={(e) => setForm((f) => ({ ...f, companyName: e.target.value }))} />
+            </Stack>
+            <TextField fullWidth size="small" label="Contact Name" value={form.contactName} onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))} />
+            <Stack direction="row" spacing={2}>
+              <TextField fullWidth size="small" label="Email" type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+              <TextField fullWidth size="small" label="Phone" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+            </Stack>
+            <Stack direction="row" spacing={2}>
+              <TextField fullWidth size="small" label="Category" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} />
+              <TextField fullWidth size="small" label="Country" value={form.country} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} />
+            </Stack>
+            <Stack direction="row" spacing={2}>
+              <TextField fullWidth size="small" label="Currency" value={form.currency} onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))} />
+              <TextField fullWidth size="small" label="Payment Terms" type="number" value={form.paymentTerms} onChange={(e) => setForm((f) => ({ ...f, paymentTerms: Number(e.target.value) }))} />
+            </Stack>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setCreateOpen(false)} disabled={createLoading}>Cancel</Button>
+          <Button
+            variant="contained"
+            startIcon={createLoading ? <CircularProgress size={16} color="inherit" /> : <AddRounded />}
+            onClick={handleCreate}
+            disabled={createLoading || !form.vendorCode || !form.companyName}
+          >
+            Create Vendor
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

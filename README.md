@@ -15,6 +15,8 @@ The OCR service supports:
 
 The fraud service uses local rule-based scoring against extracted invoice fields, vendor history, amount patterns, tax checks, PO checks, date anomalies, duplicate checks, and OCR confidence.
 
+Optionally, the fraud service can use OpenAI to improve the human-readable fraud explanation and recommendations after the local rule score is calculated. OpenAI does not replace the rule score, risk level, or approval recommendation.
+
 Use this in `.env` for real local-library processing:
 
 ```env
@@ -24,6 +26,16 @@ OCR_FALLBACK_TO_SIMULATION=true
 ```
 
 Set `OCR_FALLBACK_TO_SIMULATION=false` if you want OCR failures to stop processing instead of falling back to demo data.
+
+To enable OpenAI explanation enhancement, set:
+
+```env
+OPENAI_ENABLED=true
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-5.5
+```
+
+Leave `OPENAI_ENABLED=false` to run fully without OpenAI.
 
 Note: scanned PDFs are different from text-based PDFs. This setup handles text-based PDFs and image uploads. For scanned PDFs, upload the invoice as PNG/JPG/JPEG or add a PDF-to-image converter such as Poppler later.
 
@@ -51,7 +63,7 @@ Recommended EC2 size for all containers on one machine: `t3.large` or larger, 30
 
 1. Launch an EC2 instance.
 
-   Use Amazon Linux 2023. In the security group, allow:
+   Use Ubuntu Server 22.04 LTS or 24.04 LTS. In the security group, allow:
 
    - SSH `22` from your IP only
    - HTTP `80` from users
@@ -62,33 +74,32 @@ Recommended EC2 size for all containers on one machine: `t3.large` or larger, 30
 2. SSH into EC2.
 
    ```bash
-   ssh -i your-key.pem ec2-user@EC2_PUBLIC_IP
+   ssh -i your-key.pem ubuntu@EC2_PUBLIC_IP
    ```
 
-3. Install Docker and Git.
+3. Install Docker, Docker Compose, and Git.
 
    ```bash
-   sudo yum update -y
-   sudo yum install -y docker git
-   sudo service docker start
-   sudo systemctl enable docker
-   sudo usermod -aG docker ec2-user
+   sudo apt-get update
+   sudo apt-get install -y ca-certificates curl git
+   sudo install -m 0755 -d /etc/apt/keyrings
+   sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+   sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+   echo \
+     "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+     $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+     sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+   sudo apt-get update
+   sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+   sudo usermod -aG docker ubuntu
    newgrp docker
    docker --version
-   ```
-
-4. Install Docker Compose v2 if `docker compose version` fails.
-
-   ```bash
-   docker compose version || {
-     mkdir -p ~/.docker/cli-plugins
-     curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m) -o ~/.docker/cli-plugins/docker-compose
-     chmod +x ~/.docker/cli-plugins/docker-compose
-   }
    docker compose version
    ```
 
-5. Put the project on EC2.
+4. Put the project on EC2.
 
    Using Git:
 
@@ -100,10 +111,10 @@ Recommended EC2 size for all containers on one machine: `t3.large` or larger, 30
    Or upload from your local machine:
 
    ```bash
-   scp -i your-key.pem -r AI-Invoice-detection ec2-user@EC2_PUBLIC_IP:/home/ec2-user/
+   scp -i your-key.pem -r AI-Invoice-detection ubuntu@EC2_PUBLIC_IP:/home/ubuntu/
    ```
 
-6. Configure production environment.
+5. Configure production environment.
 
    ```bash
    cp .env.example .env
@@ -122,16 +133,19 @@ Recommended EC2 size for all containers on one machine: `t3.large` or larger, 30
    OCR_ENGINE=local
    OCR_LANGUAGE=eng
    OCR_FALLBACK_TO_SIMULATION=true
+   OPENAI_ENABLED=false
+   OPENAI_API_KEY=
+   OPENAI_MODEL=gpt-5.5
    ```
 
-7. Build and start.
+6. Build and start.
 
    ```bash
    docker compose up --build -d
    docker compose ps
    ```
 
-8. Check health and logs.
+7. Check health and logs.
 
    ```bash
    curl http://localhost/health
@@ -139,7 +153,7 @@ Recommended EC2 size for all containers on one machine: `t3.large` or larger, 30
    docker compose logs -f ocr-service
    ```
 
-9. Open the app.
+8. Open the app.
 
    Visit `http://EC2_PUBLIC_IP`, log in, and upload an invoice. With `OCR_ENGINE=local`, invoice extraction runs inside your own OCR container.
 
