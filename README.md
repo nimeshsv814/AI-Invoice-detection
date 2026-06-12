@@ -4,7 +4,7 @@ Dockerized invoice processing platform with a React frontend, Node/TypeScript mi
 
 ## OCR And Fraud Logic
 
-This project does not require Bedrock, Textract, or any AWS managed AI model.
+This project uses local OCR and rule-based fraud scoring by default. You can optionally enable Gemini API key based fraud explanation enhancement.
 
 The OCR service supports:
 
@@ -15,7 +15,7 @@ The OCR service supports:
 
 The fraud service uses local rule-based scoring against extracted invoice fields, vendor history, amount patterns, tax checks, PO checks, date anomalies, duplicate checks, and OCR confidence.
 
-Optionally, the fraud service can use OpenAI to improve the human-readable fraud explanation and recommendations after the local rule score is calculated. OpenAI does not replace the rule score, risk level, or approval recommendation.
+Optionally, Gemini can improve the human-readable fraud explanation and recommendations after the local rule score is calculated. Gemini does not replace the rule score, risk level, or approval recommendation.
 
 Use this in `.env` for real local-library processing:
 
@@ -27,15 +27,15 @@ OCR_FALLBACK_TO_SIMULATION=true
 
 Set `OCR_FALLBACK_TO_SIMULATION=false` if you want OCR failures to stop processing instead of falling back to demo data.
 
-To enable OpenAI explanation enhancement, set:
+To enable Gemini explanation enhancement, set:
 
 ```env
-OPENAI_ENABLED=true
-OPENAI_API_KEY=your_openai_api_key
-OPENAI_MODEL=gpt-5.5
+GEMINI_ENABLED=true
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-3.5-flash
 ```
 
-Leave `OPENAI_ENABLED=false` to run fully without OpenAI.
+Leave `GEMINI_ENABLED=false` to run fully without Gemini.
 
 Note: scanned PDFs are different from text-based PDFs. This setup handles text-based PDFs and image uploads. For scanned PDFs, upload the invoice as PNG/JPG/JPEG or add a PDF-to-image converter such as Poppler later.
 
@@ -133,9 +133,9 @@ Recommended EC2 size for all containers on one machine: `t3.large` or larger, 30
    OCR_ENGINE=local
    OCR_LANGUAGE=eng
    OCR_FALLBACK_TO_SIMULATION=true
-   OPENAI_ENABLED=false
-   OPENAI_API_KEY=
-   OPENAI_MODEL=gpt-5.5
+   GEMINI_ENABLED=true
+   GEMINI_API_KEY=your_gemini_api_key
+   GEMINI_MODEL=gemini-3.5-flash
    ```
 
 6. Build and start.

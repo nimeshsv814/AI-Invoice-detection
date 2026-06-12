@@ -1,5 +1,5 @@
 import { query } from '../config/database';
-import { enhanceFraudAnalysis } from './openai.service';
+import { enhanceFraudAnalysis } from './gemini.service';
 
 export interface FraudAnalysisResult {
   invoiceId: string;
@@ -148,11 +148,11 @@ export async function analyzeInvoice(
     confidence,
   };
 
-  const openAiEnhancement = await enhanceFraudAnalysis(baseResult, ocrData);
-  if (openAiEnhancement) {
-    explanation = openAiEnhancement.explanation;
-    recommendations = openAiEnhancement.recommendations.length > 0
-      ? openAiEnhancement.recommendations
+  const geminiEnhancement = await enhanceFraudAnalysis(baseResult, ocrData);
+  if (geminiEnhancement) {
+    explanation = geminiEnhancement.explanation;
+    recommendations = geminiEnhancement.recommendations.length > 0
+      ? geminiEnhancement.recommendations
       : recommendations;
   }
 

@@ -154,9 +154,9 @@ services:
       <<: *service-env
       PORT: 3005
       NOTIFICATION_SERVICE_URL: http://notification-service:3008
-      OPENAI_ENABLED: ${OPENAI_ENABLED:-false}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.5}
+      GEMINI_ENABLED: ${GEMINI_ENABLED:-false}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash}
     expose:
       - "3005"
     volumes:

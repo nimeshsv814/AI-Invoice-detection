@@ -5,7 +5,7 @@ exports.getFraudScore = getFraudScore;
 exports.getFraudTrends = getFraudTrends;
 exports.getHighRiskVendors = getHighRiskVendors;
 const database_1 = require("../config/database");
-const openai_service_1 = require("./openai.service");
+const gemini_service_1 = require("./gemini.service");
 // ─────────────────────────────────────────────────────────────────────────────
 // AI Fraud Detection Engine
 // Analyzes multiple risk dimensions and generates explainable risk scores
@@ -117,11 +117,11 @@ async function analyzeInvoice(invoiceId, ocrData) {
         recommendation,
         confidence,
     };
-    const openAiEnhancement = await (0, openai_service_1.enhanceFraudAnalysis)(baseResult, ocrData);
-    if (openAiEnhancement) {
-        explanation = openAiEnhancement.explanation;
-        recommendations = openAiEnhancement.recommendations.length > 0
-            ? openAiEnhancement.recommendations
+    const geminiEnhancement = await (0, gemini_service_1.enhanceFraudAnalysis)(baseResult, ocrData);
+    if (geminiEnhancement) {
+        explanation = geminiEnhancement.explanation;
+        recommendations = geminiEnhancement.recommendations.length > 0
+            ? geminiEnhancement.recommendations
             : recommendations;
     }
     // Persist result
